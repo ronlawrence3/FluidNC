@@ -84,7 +84,7 @@ void Maslow_::begin(void (*sys_rt)()) {
 
     currentThreshold = 1500;
     lastCallToUpdate = millis();
-    
+
     if (error) {
         log_error("Maslow failed to initialize - fix errors and restart");
     } else
@@ -385,10 +385,10 @@ bool Maslow_::takeSlackFunc() {
             if (abs(diffTL) > threshold || abs(diffTR) > threshold || abs(diffBL) > threshold || abs(diffBR) > threshold) {
                 log_error("Center point deviation over " << threshold << "mmm, your coordinate system is not accurate, maybe try running calibration again?");
                 //Should we enter an alarm state here to prevent things from going wrong?
-                
+
                 //Reset
                 takeSlackState = 0;
-                return true; 
+                return true;
             }
             else{
                 log_info("Center point deviation within " << threshold << "mm, your coordinate system is accurate");
@@ -420,7 +420,7 @@ void Maslow_::calibration_loop() {
     if (measurementInProgress) {
         if (take_measurement_avg_with_check(waypoint, direction)) {  //Takes a measurement and returns true if it's done
             measurementInProgress = false;
-            
+
             waypoint++;  //Increment the waypoint counter
 
             if (waypoint > pointCount - 1) {  //If we have reached the end of the calibration process
@@ -724,7 +724,8 @@ bool Maslow_::take_measurement(int waypoint, int dir, int run) {
             calibration_data[1][waypoint] = axisTR.getPosition() + _beltEndExtension + _armLength;
             calibration_data[2][waypoint] = axisBL.getPosition() + _beltEndExtension + _armLength;
             calibration_data[3][waypoint] = axisBR.getPosition() + _beltEndExtension + _armLength;
-            BR_tight                      = false;
+            print_waypoint_measurement(waypoint);
+            BR_tight = false;
             BL_tight                      = false;
             return true;
         }
@@ -806,6 +807,7 @@ bool Maslow_::take_measurement(int waypoint, int dir, int run) {
             calibration_data[1][waypoint] = axisTR.getPosition() + _beltEndExtension + _armLength;
             calibration_data[2][waypoint] = axisBL.getPosition() + _beltEndExtension + _armLength;
             calibration_data[3][waypoint] = axisBR.getPosition() + _beltEndExtension + _armLength;
+            print_waypoint_measurement(waypoint);
             pull1_tight                   = false;
             pull2_tight                   = false;
             return true;
@@ -813,6 +815,13 @@ bool Maslow_::take_measurement(int waypoint, int dir, int run) {
     }
 
     return false;
+}
+
+void Maslow_::print_waypoint_measurement(int waypoint) {
+    String logdata = "MEASUREMENT:{ tl: " + String(calibration_data[0][waypoint]) + ",tr: " + String(calibration_data[1][waypoint]) +
+                     ",bl: " + String(calibration_data[2][waypoint]) + ",br: " + String(calibration_data[3][waypoint]) +
+                     ",waypoint: " + String(waypoint) + "}";
+    log_data(logdata.c_str());
 }
 
 // Takes a series of measurements, calculates average and records calibration data;  returns true when it's done
@@ -909,7 +918,7 @@ bool Maslow_::move_with_slack(double fromX, double fromY, double toX, double toY
     static unsigned long moveBeginTimer = millis();
     static bool          decompress     = true;
     const float          stepSize       = 0.04;
-   
+
     static int direction = UP;
 
     //We only want to decompress at the beginning of each move
