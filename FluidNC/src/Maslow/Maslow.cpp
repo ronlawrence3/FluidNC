@@ -261,11 +261,12 @@ void Maslow_::blinkIPAddress() {
 
 //Sends a heartbeat message to the UI...should be replaced with the built in ones for fluidNC
 void Maslow_::heartBeat(){
-    static unsigned long heartBeatTimer = millis();
-    if(millis() - heartBeatTimer > 1000 && HeartBeatEnabled) {
-        heartBeatTimer = millis();
-        log_info("Heartbeat");
-    }
+    // static unsigned long heartBeatTimer = millis();
+
+    // if(millis() - heartBeatTimer > 1000 && HeartBeatEnabled) {
+    //     heartBeatTimer = millis();
+    //     log_info("Heartbeat");
+    // }
 }
 
 // -Maslow homing loop
@@ -618,6 +619,7 @@ void Maslow_::safety_control() {
                 //                   << ", but the belt speed is" << axis[i]->getBeltSpeed());
                 // log_info(axisSlackCounter[i]);
                 // log_info("Pull on " << axis_id_to_label(i).c_str() << " and restart!");
+                log_error("Axis slack counter triggered " << axis_id_to_label(i).c_str() << " motor power is " << int(axis[i]->getMotorPower()));
                 tick[i]             = true;
                 axisSlackCounter[i] = 0;
                 Maslow.panic();
@@ -629,12 +631,25 @@ void Maslow_::safety_control() {
         if ((abs(axis[i]->getPositionError()) > 1) && (sys.state() == State::Jog || sys.state() == State::Cycle) && !tick[i]) {
             // log_error("Position error on " << axis_id_to_label(i).c_str() << " axis exceeded 1mm, error is " << axis[i]->getPositionError()
             //                                << "mm");
+            log_debug("Position error > 1mm on " << axis_id_to_label(i).c_str() << " - error is " << axis[1]->getPositionError());
             tick[i] = true;
         }
         if ((abs(axis[i]->getPositionError()) > 15) && (sys.state() == State::Cycle)) {
-            log_error("Position error on " << axis_id_to_label(i).c_str() << " axis exceeded 15mm while running. Halting. Error is "
+            log_error("Position error on " << axis_id_to_label(i).c_str() << " axis exceeded 15mm while running. Rereading... Error is "
                                            << axis[i]->getPositionError() << "mm");
-            Maslow.eStop("Position error > 15mm while running. E-Stop triggered.");
+            axis[i]->updateEncoderPosition();
+            if (abs(axis[i]->getPositionError()) > 15) {
+                log_error("After read, still a position error on " << axis_id_to_label(i).c_str()
+                                                                   << " axis exceeded 15mm while running. Halting! Error is "
+                                                                   << axis[i]->getPositionError() << "mm");
+                Maslow.eStop("Position error > 15mm while running. E-Stop triggered.");
+            } else {
+                if (abs(axis[i]->getPositionError()) > 1) {
+                    log_info("Resolved, but still bigger than 1. " << axis_id_to_label(i).c_str() << " now has error " << axis[i]->getPositionError() << "mm");
+                } else {
+                    log_info("Resolved. after updateEncoder and re-read " << axis_id_to_label(i).c_str() << " now has error " << axis[i]->getPositionError() << "mm");
+                }
+            }
         }
     }
 
@@ -1592,7 +1607,7 @@ void Maslow_::zeroZPos() {
     log_info("Zeroing z-axis position");
 
     targetZ = 0;
-    
+
     int zAxis = 2;
     float* mpos = get_mpos();
     mpos[zAxis] = targetZ;
