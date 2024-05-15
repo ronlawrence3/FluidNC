@@ -95,6 +95,7 @@ void Maslow_::begin(void (*sys_rt)()) {
         log_info("Starting Maslow Version " << VERSION_NUMBER);
 }
 
+int updateCallCounter = 0;
 // Maslow main loop, everything is processed here
 void Maslow_::update() {
     static State prevState = sys.state();
@@ -130,9 +131,11 @@ void Maslow_::update() {
         saveZPos();
     }
 
-    blinkIPAddress();
+    if (sys.state() != State::Cycle) {
+        blinkIPAddress();
+    }
 
-    heartBeat();
+    // heartBeat();
 
     //Make sure we're running maslow config file
     if (!Maslow.using_default_config) {
@@ -199,10 +202,19 @@ void Maslow_::update() {
         //------------------------ End of Maslow State Machine
 
         //if the update function is not being called enough, stop everything to prevent damage
-        if (millis() - lastCallToUpdate > 100) {
-            Maslow.panic();
-            int elapsedTime = millis() - lastCallToUpdate;
-            log_error("Emergency stop. Update function not being called enough." << elapsedTime << "ms since last call");
+        int elapsedTime = millis() - lastCallToUpdate;
+        if (elapsedTime > 100) {
+            if (updateCallCounter++ < 3) {
+                updateCallCounter = 0;
+                Maslow.panic();
+                log_error("Emergency stop. Update function not being called enough." << elapsedTime << "ms since last call");
+            } else {
+                log_error("Update function not being called enough." << elapsedTime << "ms since last call " << updateCallCounter << ")");
+            }
+        } else {
+            if (updateCallCounter > 0) {
+                updateCallCounter--;
+            }
         }
     }
 
@@ -261,12 +273,12 @@ void Maslow_::blinkIPAddress() {
 
 //Sends a heartbeat message to the UI...should be replaced with the built in ones for fluidNC
 void Maslow_::heartBeat(){
-    // static unsigned long heartBeatTimer = millis();
+    static unsigned long heartBeatTimer = millis();
 
-    // if(millis() - heartBeatTimer > 1000 && HeartBeatEnabled) {
-    //     heartBeatTimer = millis();
-    //     log_info("Heartbeat");
-    // }
+    if(millis() - heartBeatTimer > 1000 && HeartBeatEnabled) {
+        heartBeatTimer = millis();
+        log_info("Heartbeat");
+    }
 }
 
 // -Maslow homing loop
@@ -1733,6 +1745,9 @@ void Maslow_::calibrationDataRecieved(){
 
 // Stop all motors and reset all state variables
 void Maslow_::stop() {
+    // if we are stopping, stop any running job too
+    allChannels.stopJob();
+
     stopMotors();
     retractingTL          = false;
     retractingTR          = false;
@@ -1749,8 +1764,6 @@ void Maslow_::stop() {
     axisBL.reset();
     axisBR.reset();
 
-    // if we are stopping, stop any running job too
-    allChannels.stopJob();
 }
 
 // Stop all the motors

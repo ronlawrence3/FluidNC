@@ -20,7 +20,7 @@
 #include "Machine/LimitPin.h"
 
 #include "./Maslow/Maslow.h"
-
+#include <Arduino.h>
 volatile ExecAlarm rtAlarm;  // Global realtime executor bitflag variable for setting various alarms.
 
 std::map<ExecAlarm, const char*> AlarmNames = {
@@ -276,6 +276,7 @@ void     protocol_main_loop() {
     // This is also where the system idles while waiting for something to do.
     // ---------------------------------------------------------------------------------
     for (;; vTaskDelay(0)) {
+        try {
         if (activeChannel) {
             // The input polling task has collected a line of input
 #ifdef DEBUG_REPORT_ECHO_RAW_LINE_RECEIVED
@@ -324,6 +325,9 @@ void     protocol_main_loop() {
             if (heapLowWater < heapWarnThreshold) {
                 log_warn("Low memory: " << heapLowWater << " bytes");
             }
+        }
+        } catch(std::exception& e) {
+            log_error("Exception " << e.what());
         }
     }
     return; /* Never reached */
@@ -479,7 +483,7 @@ static void protocol_do_feedhold() {
         runLimitLoop = false;  // Hack to stop show_limits()
         return;
     }
-    
+
     // log_debug("protocol_do_feedhold " << state_name());
     // Execute a feed hold with deceleration, if required. Then, suspend system.
     switch (sys.state()) {
@@ -828,12 +832,12 @@ void protocol_exec_rt_system() {
     if (rtSafetyDoor) {
         protocol_do_safety_door();
     }
-  
+
     //Maslow.recomputePID(); //This one works as an alternative to having recomputePID called in DCServo.cpp
 
     protocol_handle_events();
 
-    
+
     //do all the Maslow stuff here
     Maslow.update();
     // Reload step segment buffer
