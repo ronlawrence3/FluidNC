@@ -133,6 +133,8 @@ void Maslow_::update() {
 
     if (sys.state() != State::Cycle) {
         blinkIPAddress();
+    } else {
+        digitalWrite(WIFILED, LOW);
     }
 
     // heartBeat();
@@ -1745,9 +1747,6 @@ void Maslow_::calibrationDataRecieved(){
 
 // Stop all motors and reset all state variables
 void Maslow_::stop() {
-    // if we are stopping, stop any running job too
-    allChannels.stopJob();
-
     stopMotors();
     retractingTL          = false;
     retractingTR          = false;
@@ -1763,6 +1762,9 @@ void Maslow_::stop() {
     axisTR.reset();
     axisBL.reset();
     axisBR.reset();
+
+    // if we are stopping, stop any running job too
+    allChannels.stopJob();
 
 }
 
@@ -1817,6 +1819,14 @@ void Maslow_::updateCenterXY() {
     double B = (brY - tlY) / (brX - tlX);
     centerX  = (brY - (B * brX) + (A * trX) - trY) / (A - B);
     centerY  = A * (centerX - trX) + trY;
+}
+
+// Prints out state
+void Maslow_::getInfo() {
+    log_data("MINFO: { \"homed\": " << (all_axis_homed() ? "true" : "false") << ","
+          << "\"extended\": " << (allAxisExtended() ? "true" : "false") << ","
+          << "\"calibrationInProgress\": " << (calibrationInProgress ? "true" : "false")
+          << "}");
 }
 
 Maslow_& Maslow_::getInstance() {
