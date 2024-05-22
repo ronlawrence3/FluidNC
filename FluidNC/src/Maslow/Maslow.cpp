@@ -9,7 +9,7 @@
 #include "../System.h"
 
 // Maslow specific defines
-#define VERSION_NUMBER "0.71"
+#define VERSION_NUMBER "0.74"
 
 #define TLEncoderLine 2
 #define TREncoderLine 1
@@ -137,6 +137,7 @@ void Maslow_::update() {
         digitalWrite(WIFILED, LOW);
     }
 
+    // The ui is using the ping from the websocket to detect issues. we don't need the info message any more.
     // heartBeat();
 
     //Make sure we're running maslow config file
@@ -1824,8 +1825,16 @@ void Maslow_::updateCenterXY() {
 // Prints out state
 void Maslow_::getInfo() {
     log_data("MINFO: { \"homed\": " << (all_axis_homed() ? "true" : "false") << ","
-          << "\"extended\": " << (allAxisExtended() ? "true" : "false") << ","
-          << "\"calibrationInProgress\": " << (calibrationInProgress ? "true" : "false")
+          << "\"calibrationInProgress\": " << (calibrationInProgress ? "true" : "false") << ","
+          << "\"tl\": " << axisTL.getPosition() << ","
+          << "\"tr\": " << axisTR.getPosition() << ","
+          << "\"br\": " << axisBR.getPosition() << ","
+          << "\"bl\": " << axisBL.getPosition() << ","
+          << "\"etl\": " << axisTL.getPositionError() << ","
+          << "\"etr\": " << axisTR.getPositionError() << ","
+          << "\"ebr\": " << axisBR.getPositionError() << ","
+          << "\"ebl\": " << axisBL.getPositionError() << ","
+          << "\"extended\": " << (allAxisExtended() ? "true" : "false")
           << "}");
 }
 
