@@ -286,7 +286,7 @@ namespace Machine {
                 log_config_error("Configuration file:" << filename << " read error");
                 return false;
             }
-            log_config_error("Configuration file:" << filename);
+            log_info("Configuration file:" << filename);
             bool retval = load_yaml(new StringRange(buffer, buffer + filesize));
             delete[] buffer;
             return retval;
