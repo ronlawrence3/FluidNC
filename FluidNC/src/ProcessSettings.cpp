@@ -1177,7 +1177,7 @@ void make_user_commands() {
     new UserCommand("TKSLK", "Maslow/takeSlack", maslow_takeSlack, anyState);
     new UserCommand("ACKCAL", "Maslow/ackCalibration", maslow_ack_cal, anyState);
     new UserCommand("ESTOP", "Maslow/estop", maslow_estop, anyState);
-    new UserCommand("HZAxis", "Maslow/SetZAxis", maslow_set_zStop, anyState);
+    new UserCommand("SETZSTOP", "Maslow/SetZStop", maslow_set_zStop, anyState);
     new UserCommand("MINFO", "Maslow/getInfo", maslow_get_info, anyState);
 };
 
