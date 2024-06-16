@@ -1372,9 +1372,9 @@ void Maslow_::runCalibration() {
     }
     stop();
 
-    //Save that the z-axis position is zero
+    //Save the z-axis 'stop' position
     targetZ = 0;
-    zeroZPos();
+    setZStop();
 
     //if not all axis are homed, we can't run calibration, OR if the user hasnt entered width and height?
     if (!allAxisExtended()) {
@@ -1604,9 +1604,9 @@ void Maslow_::loadZPos() {
     }
 }
 
-//Sets the z-axis position to zero
-void Maslow_::zeroZPos() {
-    log_info("Zeroing z-axis position");
+/** Sets the 'bottom' Z position, this is a 'stop' beyond which travel cannot continue */
+void Maslow_::setZStop() {
+    log_info("Setting z-stop position");
 
     targetZ = 0;
 

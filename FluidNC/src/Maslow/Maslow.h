@@ -52,10 +52,11 @@ public:
     float computeTR(float x, float y, float z);
     float computeTL(float x, float y, float z);
 
-    //Save and load z-axis position
+    //Save and load z-axis position, set z-stop
     void saveZPos();
     void loadZPos();
-    void zeroZPos();
+    /** Sets the 'bottom' Z position, this is a 'stop' beyond which travel cannot continue */
+    void setZStop();
 
     //calibration functions
     void runCalibration();
