@@ -1073,9 +1073,10 @@ static Error maslow_estop(const char* value, WebUI::AuthenticationLevel auth_lev
     return Error::Ok;
 }
 
-static Error maslowHomeZ(const char* value, WebUI::AuthenticationLevel auth_level, Channel& out) {
+/** Sets the 'bottom' Z position, this is a 'stop' beyond which travel cannot continue */
+static Error maslow_set_zStop(const char* value, WebUI::AuthenticationLevel auth_level, Channel& out) {
     sys.set_state(State::Homing);
-    Maslow.zeroZPos();
+    Maslow.setZStop();
     return Error::Ok;
 }
 
@@ -1176,7 +1177,7 @@ void make_user_commands() {
     new UserCommand("TKSLK", "Maslow/takeSlack", maslow_takeSlack, anyState);
     new UserCommand("ACKCAL", "Maslow/ackCalibration", maslow_ack_cal, anyState);
     new UserCommand("ESTOP", "Maslow/estop", maslow_estop, anyState);
-    new UserCommand("HZAxis", "Maslow/homeZ", maslowHomeZ, anyState);
+    new UserCommand("SETZSTOP", "Maslow/setZStop", maslow_set_zStop, anyState);
     new UserCommand("MINFO", "Maslow/getInfo", maslow_get_info, anyState);
 };
 
