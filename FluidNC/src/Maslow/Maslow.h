@@ -8,6 +8,8 @@
 #include "../System.h"  // sys.*
 #include "../Planner.h"
 #include <nvs.h>
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 #define TCAADDR 0x70
 
@@ -20,6 +22,43 @@
 
 #define HORIZONTAL 0
 #define VERTICAL 1
+
+#define MASLOW_TELEM_FILE "M4_telemetry.bin"
+
+struct TelemetryData {
+    unsigned long millis;
+    bool extendedTL;
+    bool extendedTR;
+    bool extendedBL;
+    bool extendedBR;
+
+    bool extendingALL;
+    bool complyALL;
+    bool takeSlack;
+
+    bool safetyOn;
+    double targetX;
+    double targetY;
+    double targetZ;
+    double x;
+    double y;
+    double z;
+
+    bool test;
+    int pointCount;
+    int waypoint;
+    int calibrationGridSize;
+    unsigned long holdTimer;
+    bool holding;
+    unsigned long holdTime;
+    float centerX;
+    float centerY;
+    unsigned long lastCallToPID;
+    unsigned long lastMiss;
+    unsigned long lastCallToUpdate;
+    unsigned long extendCallTimer;
+    unsigned long complyCallTimer;
+};
 
 class Maslow_ {
 private:
@@ -111,6 +150,15 @@ public:
     void handleMotorOverides();
     bool checkOverides();
     void getInfo();
+    bool telemetry_enabled = false;
+    // TODO: probably need to use this for all fields in telemetry, but we'll try without first
+    // SemaphoreHandle_t telemetry_mutex = xSemaphoreCreateMutex();
+    TelemetryData get_telemetry_data();
+    // turns on or off telemetry gathering
+    void set_telemetry(bool enabled);
+    void dump_telemetry(const char * filename);
+    // writes whatever is in teh telemetry buffer to SD card
+    void write_telemetry_buffer(uint8_t* buffer, size_t length);
 
     //These are the current targets set by the setTargets function used for moving the machine during normal operations
     double targetX = 0;
@@ -223,7 +271,10 @@ private:
     unsigned long overideTimer = millis();
 
     bool HeartBeatEnabled = true;
-
+    void log_telem_pt(TelemetryData data);
 };
 
 extern Maslow_& Maslow;
+
+// actual task loop for gathering telemetry data (runs on utility core)
+void   telemetry_loop(void* unused);

@@ -7,6 +7,7 @@
 #include "../WebUI/WifiConfig.h"
 #include "../Protocol.h"
 #include "../System.h"
+#include "../FileStream.h"
 
 // Maslow specific defines
 #define VERSION_NUMBER "0.78"
@@ -645,7 +646,7 @@ void Maslow_::safety_control() {
             log_warn("Position error on " << axis_id_to_label(i).c_str() << " axis exceeded 15mm while running. Error is "
                                             << axis[i]->getPositionError() << "mm" << " Counter: " << positionErrorCounter[i]);
             log_warn("Previous error was " << previousPositionError[i] << "mm");
-            
+
             if(positionErrorCounter[i] > 5){
                 Maslow.eStop("Position error > 15mm while running. E-Stop triggered.");
             }
@@ -1822,6 +1823,169 @@ void Maslow_::getInfo() {
           << "\"ebl\": " << axisBL.getPositionError() << ","
           << "\"extended\": " << (allAxisExtended() ? "true" : "false")
           << "}");
+}
+
+void Maslow_::set_telemetry(bool enabled) {
+    if (enabled) {
+        // Start off the file with the length of each struct in it.
+        FileStream* file = new FileStream(MASLOW_TELEM_FILE, "w", "sd");
+        unsigned int size = sizeof(TelemetryData);
+        file->write(reinterpret_cast<uint8_t *>(&size), sizeof(unsigned int));
+        file->flush();
+        delete file;
+    } else {
+        std::string filePath = std::string("/sd/") + MASLOW_TELEM_FILE;
+        std::error_code ec;
+        stdfs::rename(stdfs::path(filePath), stdfs::path(filePath + std::to_string(millis())), ec);
+        if (ec) {
+            log_error(std::string("Error renaming file: ") + ec.message());
+        }
+    }
+    telemetry_enabled = enabled;
+    log_info("Telemetry: " << (enabled? "enabled" : "disabled"));
+}
+
+void Maslow_::log_telem_pt(TelemetryData data) {
+
+    log_data("{"
+       "\"millis\": " + std::to_string(data.millis) + ","
+       "\"extendedTL\": " + std::to_string(data.extendedTL) + ","
+       "\"extendedTR\": " + std::to_string(data.extendedTR) + ","
+       "\"extendedBL\": " + std::to_string(data.extendedBL) + ","
+       "\"extendedBR\": " + std::to_string(data.extendedBR) + ","
+       "\"extendingALL\": " + std::to_string(data.extendingALL) + ","
+       "\"complyALL\": " + std::to_string(data.complyALL) + ","
+       "\"takeSlack\": " + std::to_string(data.takeSlack) + ","
+       "\"safetyOn\": " + std::to_string(data.safetyOn) + ","
+       "\"targetX\": " + std::to_string(data.targetX) + ","
+       "\"targetY\": " + std::to_string(data.targetY) + ","
+       "\"targetZ\": " + std::to_string(data.targetZ) + ","
+       "\"x\": " + std::to_string(data.x) + ","
+       "\"y\": " + std::to_string(data.y) + ","
+       "\"test\": " + std::to_string(data.test) + ","
+       "\"pointCount\": " + std::to_string(data.pointCount) + ","
+       "\"waypoint\": " + std::to_string(data.waypoint) + ","
+       "\"calibrationGridSize\": " + std::to_string(data.calibrationGridSize) + ","
+       "\"holdTimer\": " + std::to_string(data.holdTimer) + ","
+       "\"holding\": " + std::to_string(data.holding) + ","
+       "\"holdTime\": " + std::to_string(data.holdTime) + ","
+       "\"centerX\": " + std::to_string(data.centerX) + ","
+       "\"centerY\": " + std::to_string(data.centerY) + ","
+       "\"lastCallToPID\": " + std::to_string(data.lastCallToPID) + ","
+       "\"lastMiss\": " + std::to_string(data.lastMiss) + ","
+       "\"lastCallToUpdate\": " + std::to_string(data.lastCallToUpdate) + ","
+       "\"extendCallTimer\": " + std::to_string(data.extendCallTimer) + ","
+       "\"complyCallTimer\": " + std::to_string(data.complyCallTimer) +
+       "}");
+}
+
+void Maslow_::dump_telemetry(const char* file) {
+    // open the file
+    FileStream* f = new FileStream(file, "r", "sd");
+    if (f) {
+        // read the size of each struct from the file
+        unsigned int numbytes = 1;
+        f->read(reinterpret_cast<char*>(&numbytes), sizeof(unsigned int));
+        log_info("Struct size " << numbytes)
+        TelemetryData* data   = new TelemetryData();
+        char*          buffer = new char[numbytes];
+        while (f->available()) {
+            f->read(&buffer[0], numbytes);
+            // populate data from buffer
+            memcpy(data, buffer, numbytes);
+            // print the data
+            log_telem_pt(*data);
+        }
+        // delete the buffer
+        delete[] buffer;
+        // delete the data
+        delete data;
+    } else{
+        log_info("File not found")
+    }
+    delete f;
+}
+
+TelemetryData Maslow_::get_telemetry_data() {
+    TelemetryData data;
+
+    // TODO: probably, we ought to use a mutex here, but it is not implemented yet
+    //if (xSemaphoreTake(telemetry_mutex, portMAX_DELAY)) {
+        // Access shared variables here
+        data.millis              = millis();
+        data.extendedTL          = extendedTL;
+        data.extendedTR          = extendedTR;
+        data.extendedBL          = extendedBL;
+        data.extendedBR          = extendedBR;
+        data.extendingALL        = extendingALL;
+        data.complyALL           = complyALL;
+        data.takeSlack           = takeSlack;
+        data.safetyOn            = safetyOn;
+        data.targetX             = targetX;
+        data.targetY             = targetY;
+        data.targetZ             = targetZ;
+        data.x                   = x;
+        data.y                   = y;
+        data.test                = test;
+        data.pointCount          = pointCount;
+        data.waypoint            = waypoint;
+        data.calibrationGridSize = calibrationGridSize;
+        data.holdTimer           = holdTimer;
+        data.holding             = holding;
+        data.holdTime            = holdTime;
+        data.centerX             = centerX;
+        data.centerY             = centerY;
+        data.lastCallToPID       = lastCallToPID;
+        data.lastMiss            = lastMiss;
+        data.lastCallToUpdate    = lastCallToUpdate;
+        data.extendCallTimer     = extendCallTimer;
+        data.complyCallTimer     = complyCallTimer;
+        // xSemaphoreGive(telemetry_mutex);
+    //}
+    return data;
+}
+void Maslow_::write_telemetry_buffer(uint8_t* buffer, size_t length) {
+    // Open the file in append mode
+    FileStream* file = new FileStream(MASLOW_TELEM_FILE, "a", "sd");
+
+    // Write the buffer to the file
+    file->write(buffer, length);
+    file->flush();
+
+    // Close the file
+    delete file;
+}
+
+// Called on utility core as a task to gather telemetry and write it to an SD log
+void telemetry_loop(void* unused) {
+    const int bufferSize = 5000;
+    uint8_t buffer[bufferSize];
+    int bufferIndex = 0;
+
+    while (true) {
+        if (Maslow.telemetry_enabled) {
+            TelemetryData data = Maslow.get_telemetry_data();
+
+            // Copy the telemetry data into the buffer
+            memcpy(buffer + bufferIndex, reinterpret_cast<uint8_t*>(&data), sizeof(TelemetryData));
+            // increment the index
+            bufferIndex += sizeof(TelemetryData);
+
+            // Check if the buffer is about to overflow
+            if (bufferIndex >= bufferSize) {
+                log_debug("!" << bufferIndex);
+                Maslow.write_telemetry_buffer(buffer, bufferIndex);
+                bufferIndex = 0;
+            }
+        } else {
+            if (bufferIndex > 0) {
+                Maslow.write_telemetry_buffer(buffer, bufferIndex);
+                bufferIndex = 0;
+            }
+        }
+        // Start with 2Hz-ish
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
 }
 
 Maslow_& Maslow_::getInstance() {
