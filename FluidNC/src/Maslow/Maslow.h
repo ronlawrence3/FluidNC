@@ -25,8 +25,41 @@
 
 #define MASLOW_TELEM_FILE "M4_telemetry.bin"
 
+struct TelemetryFileHeader {
+    unsigned int structureSize; // 4 bytes
+    char version[10];       // 10
+    // if you add to the header take bytes from this
+    char _unused[64]; // 64 bytes
+};
+
 struct TelemetryData {
-    unsigned long millis;
+    unsigned long timestamp;
+    // motors
+    double tlCurrent;
+    double trCurrent;
+    double blCurrent;
+    double brCurrent;
+    // power
+    double tlPower;
+    double trPower;
+    double blPower;
+    double brPower;
+    // speed
+    double tlSpeed;
+    double trSpeed;
+    double blSpeed;
+    double brSpeed;
+     // position
+    double tlPos;
+    double trPos;
+    double blPos;
+    double brPos;
+
+    int tlState;
+    int trState;
+    int blState;
+    int brState;
+
     bool extendedTL;
     bool extendedTR;
     bool extendedBL;

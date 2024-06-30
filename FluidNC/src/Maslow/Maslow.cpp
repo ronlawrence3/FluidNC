@@ -1829,8 +1829,11 @@ void Maslow_::set_telemetry(bool enabled) {
     if (enabled) {
         // Start off the file with the length of each struct in it.
         FileStream* file = new FileStream(MASLOW_TELEM_FILE, "w", "sd");
-        unsigned int size = sizeof(TelemetryData);
-        file->write(reinterpret_cast<uint8_t *>(&size), sizeof(unsigned int));
+        // write header
+        TelemetryFileHeader header;
+        header.structureSize = sizeof(TelemetryData);
+        strcpy(header.version, VERSION_NUMBER);
+        file->write(reinterpret_cast<uint8_t *>(&header), sizeof(TelemetryFileHeader));
         file->flush();
         delete file;
     } else {
@@ -1846,9 +1849,24 @@ void Maslow_::set_telemetry(bool enabled) {
 }
 
 void Maslow_::log_telem_pt(TelemetryData data) {
-
     log_data("{"
-       "\"millis\": " + std::to_string(data.millis) + ","
+       "\"millis\": " + std::to_string(data.timestamp) + ","
+       "\"tlCurrent\": " + std::to_string(data.tlCurrent) + ","
+       "\"trCurrent\": " + std::to_string(data.trCurrent)  + ","
+       "\"blCurrent\": " + std::to_string(data.blCurrent)  + ","
+       "\"brCurrent\": " + std::to_string(data.brCurrent)  + ","
+       "\"tlPower\": " + std::to_string(data.tlPower) + ","
+       "\"trPower\": " + std::to_string(data.trPower) + ","
+       "\"blPower\": " + std::to_string(data.blPower) + ","
+       "\"brPower\": " + std::to_string(data.brPower) + ","
+       "\"tlSpeed\": " + std::to_string(data.tlSpeed) + ","
+       "\"trSpeed\": " + std::to_string(data.trSpeed) + ","
+       "\"blSpeed\": " + std::to_string(data.blSpeed) + ","
+       "\"brSpeed\": " + std::to_string(data.brSpeed) + ","
+       "\"tlPos\": " + std::to_string(data.tlPos) + ","
+       "\"trPos\": "   + std::to_string(data.trPos) + ","
+       "\"blPos\": "   + std::to_string(data.blPos) + ","
+       "\"brPos\": "   + std::to_string(data.brPos) + ","
        "\"extendedTL\": " + std::to_string(data.extendedTL) + ","
        "\"extendedTR\": " + std::to_string(data.extendedTR) + ","
        "\"extendedBL\": " + std::to_string(data.extendedBL) + ","
@@ -1879,6 +1897,77 @@ void Maslow_::log_telem_pt(TelemetryData data) {
        "}");
 }
 
+TelemetryData Maslow_::get_telemetry_data() {
+    TelemetryData data;
+
+    // TODO: probably, we ought to use mutexes here?, but it is not implemented yet and
+    // it may not matter much. the reads are generally of types that don't
+    //if (xSemaphoreTake(telemetry_mutex, portMAX_DELAY)) {
+    // Access shared variables here
+    data.timestamp = millis();
+    data.tlCurrent = axisTL.getMotorCurrent();
+    data.trCurrent = axisTR.getMotorCurrent();
+    data.blCurrent = axisBL.getMotorCurrent();
+    data.brCurrent = axisBR.getMotorCurrent();
+
+    data.tlPower = axisTL.getMotorPower();
+    data.trPower = axisTR.getMotorPower();
+    data.blPower = axisBL.getMotorPower();
+    data.brPower = axisBR.getMotorPower();
+
+    data.tlSpeed = axisTL.getBeltSpeed();
+    data.trSpeed = axisTR.getBeltSpeed();
+    data.blSpeed = axisBL.getBeltSpeed();
+    data.brSpeed = axisBR.getBeltSpeed();
+
+    data.tlPos = axisTL.getPosition();
+    data.trPos = axisTR.getPosition();
+    data.blPos = axisBL.getPosition();
+    data.brPos = axisBR.getPosition();
+
+    data.extendedTL          = extendedTL;
+    data.extendedTR          = extendedTR;
+    data.extendedBL          = extendedBL;
+    data.extendedBR          = extendedBR;
+    data.extendingALL        = extendingALL;
+    data.complyALL           = complyALL;
+    data.takeSlack           = takeSlack;
+    data.safetyOn            = safetyOn;
+    data.targetX             = targetX;
+    data.targetY             = targetY;
+    data.targetZ             = targetZ;
+    data.x                   = x;
+    data.y                   = y;
+    data.test                = test;
+    data.pointCount          = pointCount;
+    data.waypoint            = waypoint;
+    data.calibrationGridSize = calibrationGridSize;
+    data.holdTimer           = holdTimer;
+    data.holding             = holding;
+    data.holdTime            = holdTime;
+    data.centerX             = centerX;
+    data.centerY             = centerY;
+    data.lastCallToPID       = lastCallToPID;
+    data.lastMiss            = lastMiss;
+    data.lastCallToUpdate    = lastCallToUpdate;
+    data.extendCallTimer     = extendCallTimer;
+    data.complyCallTimer     = complyCallTimer;
+    // xSemaphoreGive(telemetry_mutex);
+    //}
+    return data;
+}
+void Maslow_::write_telemetry_buffer(uint8_t* buffer, size_t length) {
+    // Open the file in append mode
+    FileStream* file = new FileStream(MASLOW_TELEM_FILE, "a", "sd");
+
+    // Write the buffer to the file
+    file->write(buffer, length);
+    file->flush();
+
+    // Close the file
+    delete file;
+}
+
 void Maslow_::dump_telemetry(const char* file) {
     // open the file
     FileStream* f = new FileStream(file, "r", "sd");
@@ -1904,56 +1993,6 @@ void Maslow_::dump_telemetry(const char* file) {
         log_info("File not found")
     }
     delete f;
-}
-
-TelemetryData Maslow_::get_telemetry_data() {
-    TelemetryData data;
-
-    // TODO: probably, we ought to use a mutex here, but it is not implemented yet
-    //if (xSemaphoreTake(telemetry_mutex, portMAX_DELAY)) {
-        // Access shared variables here
-        data.millis              = millis();
-        data.extendedTL          = extendedTL;
-        data.extendedTR          = extendedTR;
-        data.extendedBL          = extendedBL;
-        data.extendedBR          = extendedBR;
-        data.extendingALL        = extendingALL;
-        data.complyALL           = complyALL;
-        data.takeSlack           = takeSlack;
-        data.safetyOn            = safetyOn;
-        data.targetX             = targetX;
-        data.targetY             = targetY;
-        data.targetZ             = targetZ;
-        data.x                   = x;
-        data.y                   = y;
-        data.test                = test;
-        data.pointCount          = pointCount;
-        data.waypoint            = waypoint;
-        data.calibrationGridSize = calibrationGridSize;
-        data.holdTimer           = holdTimer;
-        data.holding             = holding;
-        data.holdTime            = holdTime;
-        data.centerX             = centerX;
-        data.centerY             = centerY;
-        data.lastCallToPID       = lastCallToPID;
-        data.lastMiss            = lastMiss;
-        data.lastCallToUpdate    = lastCallToUpdate;
-        data.extendCallTimer     = extendCallTimer;
-        data.complyCallTimer     = complyCallTimer;
-        // xSemaphoreGive(telemetry_mutex);
-    //}
-    return data;
-}
-void Maslow_::write_telemetry_buffer(uint8_t* buffer, size_t length) {
-    // Open the file in append mode
-    FileStream* file = new FileStream(MASLOW_TELEM_FILE, "a", "sd");
-
-    // Write the buffer to the file
-    file->write(buffer, length);
-    file->flush();
-
-    // Close the file
-    delete file;
 }
 
 // Called on utility core as a task to gather telemetry and write it to an SD log
