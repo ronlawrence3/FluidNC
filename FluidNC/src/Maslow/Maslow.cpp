@@ -10,7 +10,7 @@
 #include "../FileStream.h"
 
 // Maslow specific defines
-#define VERSION_NUMBER "0.78"
+#define VERSION_NUMBER "0.79"
 
 #define TLEncoderLine 2
 #define TREncoderLine 1
@@ -1724,7 +1724,7 @@ void Maslow_::print_calibration_data() {
     }
     data += "]";
     HeartBeatEnabled = false;
-    log_data(data.c_str());  //will it print really large strings?
+    log_data(data.c_str());
     HeartBeatEnabled = true;
 }
 

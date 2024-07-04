@@ -49,7 +49,7 @@ extern bool atMsgLevel(MsgLevel level);
 
 // Note: these '{'..'}' scopes are here for a reason: the destructor should flush.
 
-//#define log_bare(prefix, x) { LogStream ss(prefix); ss << x; }
+// #define log_bare(prefix, x) { LogStream ss(prefix); ss << x; }
 #define log_data(x) { LogStream ss(""); ss << x; }
 #define log_msg(x) { LogStream ss("[MSG: "); ss << x; }
 #define log_verbose(x) if (atMsgLevel(MsgLevelVerbose)) { LogStream ss("[MSG:VRB: "); ss << x; }
@@ -59,6 +59,7 @@ extern bool atMsgLevel(MsgLevel level);
 #define log_error(x) if (atMsgLevel(MsgLevelError)) { LogStream ss("[MSG:ERR: "); ss << x; }
 #define log_config_error(x) if (atMsgLevel(MsgLevelError)) { LogStream ss("[MSG:ERR: "); ss << x; }
 #define log_fatal(x) { LogStream ss("[MSG:FATAL: "); ss << x;  Assert(false, "A fatal error occurred."); }
+#define log_config_error(x) if (atMsgLevel(MsgLevelError)) { LogStream ss("[MSG:ERR: "); ss << x; }
 
 #define log_msg_to(out, x) { LogStream ss(out, "[MSG: "); ss << x; }
 #define log_verbose_to(out, x) if (atMsgLevel(MsgLevelVerbose)) { LogStream ss(out, "[MSG:VRB: "); ss << x; }
