@@ -894,8 +894,14 @@ static Error maslow_telemetry_dump(const char* value, WebUI::AuthenticationLevel
     Maslow.dump_telemetry(value);
     return Error::Ok;
 }
-static Error maslow_telemetry_toggle(const char* value, WebUI::AuthenticationLevel auth_level, Channel& out) {
-    Maslow.set_telemetry(!Maslow.telemetry_enabled);
+static Error maslow_telemetry_set(const char* value, WebUI::AuthenticationLevel auth_level, Channel& out) {
+    if (!value ||!*value) {
+        // if no value, then toggle telem
+        Maslow.set_telemetry(!Maslow.telemetry_enabled);
+    } else {
+        Maslow.set_telemetry(*value == '1');
+    }
+    log_info("M4 telmetry set to " << (Maslow.telemetry_enabled ? "on" : "off"));
     return Error::Ok;
 }
 static Error maslow_set_comply(const char* value, WebUI::AuthenticationLevel auth_level, Channel& out) {
@@ -1166,7 +1172,7 @@ void make_user_commands() {
     new UserCommand("ALL", "Maslow/retract", maslow_retract_ALL, anyState);
     new UserCommand("EXT", "Maslow/extend", maslow_extend_ALL, anyState);
     new UserCommand("TELEMDUMP", "Maslow/telemetryDump", maslow_telemetry_dump, anyState);
-    new UserCommand("TELEM", "Maslow/toggleTelemetry", maslow_telemetry_toggle, anyState);
+    new UserCommand("TELEM", "Maslow/setTelemetry", maslow_telemetry_set, anyState);
     new UserCommand("CMP", "Maslow/comply", maslow_set_comply, anyState);
     new UserCommand("CAL", "Maslow/calibrate", maslow_start_calibration, anyState);
 
